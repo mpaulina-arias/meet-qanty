@@ -67,3 +67,14 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+
+
+####### Custom ignores #######
+
+
+# Env files
+.env
+frontend/.env
+functions/.env
+
