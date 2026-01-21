@@ -28,6 +28,12 @@ const router = createRouter({
       component: () => import('@/views/dashboard/DashboardHome.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/availability',
+      name: 'availability',
+      component: () => import('@/views/dashboard/AvailabilityView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
