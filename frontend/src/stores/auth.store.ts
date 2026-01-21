@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import {
   getAuth,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
@@ -66,6 +67,27 @@ export const useAuthStore = defineStore('auth', {
         await this.handleAuthenticatedUser(result.user)
       } catch (error) {
         console.error('Google login error', error)
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Login con Google
+     */
+
+    async loginWithMicrosoft() {
+      const auth = getAuth()
+      const provider = new OAuthProvider('microsoft.com')
+
+      this.loading = true
+
+      try {
+        const result = await signInWithPopup(auth, provider)
+        await this.handleAuthenticatedUser(result.user)
+      } catch (error) {
+        console.error('Microsoft login error', error)
         throw error
       } finally {
         this.loading = false

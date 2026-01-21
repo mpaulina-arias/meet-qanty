@@ -14,6 +14,15 @@ const handleGoogleLogin = async () => {
   }
 }
 
+// Implementación de Microsoft Login
+const handleMicrosoftLogin = async () => {
+  try {
+    await authStore.loginWithMicrosoft()
+  } catch (error) {
+    console.error('Login failed', error)
+  }
+}
+
 // Si el usuario ya está autenticado, redirige
 watch(
   () => authStore.user,
@@ -36,6 +45,11 @@ watch(
         <span v-if="!authStore.loading">Continuar con Google</span>
         <span v-else>Iniciando sesión...</span>
       </button>
+
+      <!-- <button class="microsoft-btn" :disabled="authStore.loading" @click="handleMicrosoftLogin">
+        <span v-if="!authStore.loading">Continuar con Microsoft</span>
+        <span v-else>Iniciando sesión...</span>
+      </button> -->
     </div>
   </div>
 </template>
