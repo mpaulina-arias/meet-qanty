@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuthStore } from './auth.store'
-import { validateRanges } from '@/utils/availability.validation'
+import { validateRanges } from '@/utils/availability/workScheduleValidation'
 
 /* =========================
    TIPOS

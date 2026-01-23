@@ -6,10 +6,19 @@ import { httpsCallable } from 'firebase/functions'
 import { functions, db } from '@/services/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { useAuthStore } from '@/stores/auth.store'
+import { generateAvailableRanges } from '@/utils/availability/generateAvailableRanges'
+
+type BusyEvent = {
+  start: string
+  end: string
+}
 
 /* =======================
    STORES & STATE
 ======================= */
+const busyEvents = ref<BusyEvent[]>([])
+const availableSlots = ref<any[]>([])
+
 const availability = useAvailabilityStore()
 const auth = useAuthStore()
 const timezones = getTimeZones()
@@ -65,7 +74,20 @@ const testBusyEvents = async () => {
     const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
     const res = await fn({ start, end })
-    console.log('Busy events:', res.data)
+
+    busyEvents.value = res.data as BusyEvent[]
+
+    console.log('Busy events:', busyEvents.value)
+
+    // 🧠 EJEMPLO: martes 2026-01-27
+    availableSlots.value = generateAvailableRanges(
+      availability.weekly.tuesday.ranges,
+      busyEvents.value,
+      '2026-01-27',
+      availability.timezone,
+    )
+
+    console.log('AVAILABLE:', availableSlots.value)
   } catch (err: any) {
     console.error(err)
     error.value = err.message ?? 'Error consultando Google Calendar'

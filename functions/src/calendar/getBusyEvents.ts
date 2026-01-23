@@ -1,8 +1,15 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
 import { getValidGoogleAccessToken } from "./refreshGoogleToken";
 
+const GOOGLE_CLIENT_ID = defineSecret("GOOGLE_CLIENT_ID");
+const GOOGLE_CLIENT_SECRET = defineSecret("GOOGLE_CLIENT_SECRET");
+
 export const getBusyEvents = onCall(
-  { region: "us-central1" },
+  {
+    region: "us-central1",
+    secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET],
+  },
   async (request) => {
     const uid = request.auth?.uid;
 
@@ -12,12 +19,26 @@ export const getBusyEvents = onCall(
 
     const { start, end } = request.data ?? {};
 
-    if (!start || !end) {
-      throw new HttpsError("invalid-argument", "start and end are required");
+    if (typeof start !== "string" || typeof end !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "start and end must be ISO strings",
+      );
     }
 
-    const accessToken = await getValidGoogleAccessToken(uid);
+    // 🔐 Token válido (auto-refresh)
+    let accessToken: string;
+    try {
+      accessToken = await getValidGoogleAccessToken(uid);
+    } catch (err) {
+      console.error("Token error:", err);
+      throw new HttpsError(
+        "failed-precondition",
+        "Google Calendar not connected",
+      );
+    }
 
+    // 📅 Google FreeBusy
     const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
       method: "POST",
       headers: {
@@ -39,6 +60,14 @@ export const getBusyEvents = onCall(
     }
 
     const data = await res.json();
-    return data.calendars.primary.busy ?? [];
+
+    const busy = data?.calendars?.primary?.busy;
+
+    if (!Array.isArray(busy)) {
+      console.warn("Unexpected freeBusy response:", data);
+      return [];
+    }
+
+    return busy;
   },
 );
