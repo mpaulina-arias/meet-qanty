@@ -7,9 +7,13 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
+import { setGlobalOptions } from "firebase-functions";
+//import {onRequest} from "firebase-functions/https";
+//import * as logger from "firebase-functions/logger";
+
+export { oauthGoogleStart } from "./oauth/googleStart";
+export { oauthGoogleCallback } from "./oauth/googleCallback";
+export { getBusyEvents } from "./calendar/getBusyEvents";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript

@@ -1,26 +1,130 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useAvailabilityStore, type Day, DAYS } from '@/stores/availability.store'
+import { onMounted, ref, watch } from 'vue'
+import { useAvailabilityStore, DAYS, type Day } from '@/stores/availability.store'
 import { getTimeZones } from '@/utils/timezones'
+import { httpsCallable } from 'firebase/functions'
+import { functions, db } from '@/services/firebase'
+import { doc, getDoc } from 'firebase/firestore'
+import { useAuthStore } from '@/stores/auth.store'
 
+/* =======================
+   STORES & STATE
+======================= */
+const availability = useAvailabilityStore()
+const auth = useAuthStore()
 const timezones = getTimeZones()
 
-const availability = useAvailabilityStore()
+const googleConnected = ref(false)
+const loadingBusy = ref(false)
+const error = ref<string | null>(null)
 
+/* =======================
+   GOOGLE CALENDAR
+======================= */
+
+/**
+ * Verifica si el usuario ya conectó Google Calendar
+ */
+const checkGoogleConnection = async () => {
+  if (!auth.user) return
+
+  const refDoc = doc(db, 'calendar_integrations', auth.user.uid)
+  const snap = await getDoc(refDoc)
+
+  googleConnected.value = snap.exists()
+}
+
+/**
+ * Inicia OAuth (DEV o PROD)
+ */
+const connectGoogleCalendar = () => {
+  if (!auth.user) return
+
+  const isLocalhost = window.location.hostname === 'localhost'
+
+  const env = isLocalhost ? 'dev' : 'prod'
+
+  window.location.href =
+    'https://us-central1-meet-qanty.cloudfunctions.net/oauthGoogleStart' +
+    `?uid=${auth.user.uid}&env=${env}`
+}
+
+/**
+ * Prueba eventos ocupados (solo si está conectado)
+ */
+const testBusyEvents = async () => {
+  if (!googleConnected.value) return
+
+  loadingBusy.value = true
+  error.value = null
+
+  try {
+    const fn = httpsCallable(functions, 'getBusyEvents')
+
+    const start = new Date().toISOString()
+    const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+    const res = await fn({ start, end })
+    console.log('Busy events:', res.data)
+  } catch (err: any) {
+    console.error(err)
+    error.value = err.message ?? 'Error consultando Google Calendar'
+  } finally {
+    loadingBusy.value = false
+  }
+}
+
+/* =======================
+   LIFECYCLE
+======================= */
 onMounted(() => {
   availability.loadSchedule()
 })
+
+watch(
+  () => auth.user,
+  async (user) => {
+    if (user) {
+      await checkGoogleConnection()
+    }
+  },
+  { immediate: true },
+)
+
+/* =======================
+   HELPERS
+======================= */
+function formatDay(day: Day): string {
+  return day.charAt(0).toUpperCase() + day.slice(1)
+}
 </script>
 
 <template>
-  <div>
+  <div class="availability-view">
     <h1>Horario laboral</h1>
 
-    <!-- Zona horaria -->
-    <div class="timezone">
-      <label>Zona horaria</label>
+    <!-- =======================
+         Google Calendar
+    ======================= -->
+    <section class="integration">
+      <h2>Google Calendar</h2>
 
-      <select v-model="availability.timezone">
+      <p v-if="googleConnected" class="ok">✅ Conectado correctamente</p>
+
+      <button v-else class="connect-btn" @click="connectGoogleCalendar">
+        🔗 Conectar Google Calendar
+      </button>
+    </section>
+
+    <hr />
+
+    <!-- =======================
+         Zona horaria
+    ======================= -->
+    <div class="timezone">
+      <label for="timezone">Zona horaria</label>
+
+      <select id="timezone" v-model="availability.timezone">
         <option v-for="tz in timezones" :key="tz" :value="tz">
           {{ tz }}
         </option>
@@ -29,11 +133,13 @@ onMounted(() => {
 
     <hr />
 
-    <!-- Horario semanal -->
+    <!-- =======================
+         Horario semanal
+    ======================= -->
     <div v-for="day in DAYS" :key="day" class="day-row">
       <label class="day-label">
         <input type="checkbox" v-model="availability.weekly[day].enabled" />
-        {{ day }}
+        {{ formatDay(day) }}
       </label>
 
       <div v-if="availability.weekly[day].enabled" class="ranges">
@@ -42,11 +148,15 @@ onMounted(() => {
           :key="index"
           class="range-row"
         >
-          <input type="time" v-model="range.start" />
-          <span>–</span>
-          <input type="time" v-model="range.end" />
+          <input type="time" v-model="range.start" @change="availability.validateDay(day)" />
 
-          <button type="button" @click="availability.removeRange(day, index)">🗑️</button>
+          <span>–</span>
+
+          <input type="time" v-model="range.end" @change="availability.validateDay(day)" />
+
+          <button type="button" class="delete-btn" @click="availability.removeRange(day, index)">
+            🗑️
+          </button>
         </div>
 
         <button type="button" class="add-btn" @click="availability.addRange(day)">
@@ -59,41 +169,17 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- =======================
+         ACCIONES
+    ======================= -->
     <button class="save-btn" @click="availability.saveSchedule">Guardar cambios</button>
+
+    <button v-if="googleConnected" @click="testBusyEvents" :disabled="loadingBusy">
+      {{ loadingBusy ? 'Consultando…' : 'Probar eventos ocupados' }}
+    </button>
+
+    <p v-if="error" class="error">
+      {{ error }}
+    </p>
   </div>
 </template>
-
-<style scoped>
-.timezone {
-  margin-bottom: 1.5rem;
-}
-
-.day-row {
-  margin-bottom: 1.2rem;
-}
-
-.day-label {
-  font-weight: 600;
-}
-
-.ranges {
-  margin-left: 1.5rem;
-}
-
-.range-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.add-btn {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.save-btn {
-  margin-top: 2rem;
-  padding: 0.75rem 1.25rem;
-}
-</style>

@@ -1,3 +1,4 @@
+// src/stores/auth.store.ts
 import { defineStore } from 'pinia'
 import {
   getAuth,
@@ -35,10 +36,6 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   actions: {
-    /**
-     * Inicializa el listener de Firebase Auth
-     * Se llama UNA sola vez al iniciar la app
-     */
     initAuthListener() {
       const auth = getAuth()
 
@@ -54,61 +51,43 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Login con Google
+     * Login Google (SOLO identidad)
      */
     async loginWithGoogle() {
       const auth = getAuth()
       const provider = new GoogleAuthProvider()
 
       this.loading = true
-
       try {
         const result = await signInWithPopup(auth, provider)
         await this.handleAuthenticatedUser(result.user)
-      } catch (error) {
-        console.error('Google login error', error)
-        throw error
       } finally {
         this.loading = false
       }
     },
 
     /**
-     * Login con Google
+     * Login Microsoft (SOLO identidad)
      */
-
     async loginWithMicrosoft() {
       const auth = getAuth()
       const provider = new OAuthProvider('microsoft.com')
 
       this.loading = true
-
       try {
         const result = await signInWithPopup(auth, provider)
         await this.handleAuthenticatedUser(result.user)
-      } catch (error) {
-        console.error('Microsoft login error', error)
-        throw error
       } finally {
         this.loading = false
       }
     },
 
-    /**
-     * Logout
-     */
     async logout() {
       const auth = getAuth()
       await signOut(auth)
       this.user = null
     },
 
-    /**
-     * Maneja el usuario autenticado:
-     * - Verifica si existe en Firestore
-     * - Lo crea si no existe
-     * - Lo guarda en el store
-     */
     async handleAuthenticatedUser(firebaseUser: FirebaseUser) {
       const userRef = doc(db, 'users', firebaseUser.uid)
       const snap = await getDoc(userRef)
@@ -136,18 +115,12 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Convierte providerId de Firebase a nuestro dominio
-     */
     mapProvider(providerId?: string): 'google' | 'microsoft' {
       if (providerId === 'google.com') return 'google'
       if (providerId === 'microsoft.com') return 'microsoft'
       return 'google'
     },
 
-    /**
-     * Genera slug público a partir del nombre
-     */
     generateSlug(name?: string | null): string {
       if (!name) return 'user'
 
