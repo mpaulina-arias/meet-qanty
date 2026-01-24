@@ -6,9 +6,11 @@ import { httpsCallable } from 'firebase/functions'
 import { functions, db } from '@/services/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { useAuthStore } from '@/stores/auth.store'
-import { generateAvailableRanges } from '@/utils/availability/generateAvailableRanges'
 
-type BusyEvent = {
+/* =======================
+   TYPES
+======================= */
+type Slot = {
   start: string
   end: string
 }
@@ -16,16 +18,15 @@ type BusyEvent = {
 /* =======================
    STORES & STATE
 ======================= */
-const busyEvents = ref<BusyEvent[]>([])
-const availableSlots = ref<any[]>([])
-
 const availability = useAvailabilityStore()
 const auth = useAuthStore()
 const timezones = getTimeZones()
 
 const googleConnected = ref(false)
-const loadingBusy = ref(false)
+const loading = ref(false)
 const error = ref<string | null>(null)
+
+const availableSlots = ref<Slot[]>([])
 
 /* =======================
    GOOGLE CALENDAR
@@ -50,7 +51,6 @@ const connectGoogleCalendar = () => {
   if (!auth.user) return
 
   const isLocalhost = window.location.hostname === 'localhost'
-
   const env = isLocalhost ? 'dev' : 'prod'
 
   window.location.href =
@@ -59,40 +59,39 @@ const connectGoogleCalendar = () => {
 }
 
 /**
- * Prueba eventos ocupados (solo si está conectado)
+ * Prueba slots disponibles (backend)
  */
-const testBusyEvents = async () => {
+const testAvailableSlots = async () => {
   if (!googleConnected.value) return
 
-  loadingBusy.value = true
+  loading.value = true
   error.value = null
 
   try {
-    const fn = httpsCallable(functions, 'getBusyEvents')
+    // Llamadas a las funciones
+    const fnSlots = httpsCallable(functions, 'getAvailableSlots')
+    const fnBusy = httpsCallable(functions, 'getBusyEvents')
 
-    const start = new Date().toISOString()
-    const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    const dateStr = '2026-01-27' // YYYY-MM-DD
+    const duration = 30 // minutos
 
-    const res = await fn({ start, end })
+    // Llamamos a getAvailableSlots
+    const slotsRes = await fnSlots({ date: dateStr, duration })
+    availableSlots.value = slotsRes.data as Slot[]
+    console.log('AVAILABLE SLOTS:', availableSlots.value)
 
-    busyEvents.value = res.data as BusyEvent[]
+    // Llamamos a getBusyEvents para ver qué ocupa el Google Calendar
+    // En getBusyEvents se espera un start y end en ISO string
+    const start = `${dateStr}T00:00:00Z`
+    const end = `${dateStr}T23:59:59.999Z`
 
-    console.log('Busy events:', busyEvents.value)
-
-    // 🧠 EJEMPLO: martes 2026-01-27
-    availableSlots.value = generateAvailableRanges(
-      availability.weekly.tuesday.ranges,
-      busyEvents.value,
-      '2026-01-27',
-      availability.timezone,
-    )
-
-    console.log('AVAILABLE:', availableSlots.value)
+    const busyRes = await fnBusy({ start, end })
+    console.log('BUSY EVENTS:', busyRes.data.busy)
   } catch (err: any) {
     console.error(err)
-    error.value = err.message ?? 'Error consultando Google Calendar'
+    error.value = err.message ?? 'Error obteniendo disponibilidad'
   } finally {
-    loadingBusy.value = false
+    loading.value = false
   }
 }
 
@@ -196,12 +195,17 @@ function formatDay(day: Day): string {
     ======================= -->
     <button class="save-btn" @click="availability.saveSchedule">Guardar cambios</button>
 
-    <button v-if="googleConnected" @click="testBusyEvents" :disabled="loadingBusy">
-      {{ loadingBusy ? 'Consultando…' : 'Probar eventos ocupados' }}
+    <button v-if="googleConnected" @click="testAvailableSlots" :disabled="loading">
+      {{ loading ? 'Consultando…' : 'Probar disponibilidad' }}
     </button>
 
     <p v-if="error" class="error">
       {{ error }}
     </p>
+
+    <!-- DEBUG -->
+    <pre v-if="availableSlots.length"
+      >{{ availableSlots }}
+    </pre>
   </div>
 </template>

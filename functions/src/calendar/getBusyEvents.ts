@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { getValidGoogleAccessToken } from "./refreshGoogleToken";
+import { db } from "../utils/firestore";
 
 const GOOGLE_CLIENT_ID = defineSecret("GOOGLE_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = defineSecret("GOOGLE_CLIENT_SECRET");
@@ -26,7 +27,20 @@ export const getBusyEvents = onCall(
       );
     }
 
-    // 🔐 Token válido (auto-refresh)
+    // Load user profile (timezone is source of truth)
+    const userSnap = await db.collection("users").doc(uid).get();
+
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "User profile not found");
+    }
+
+    const { timezone } = userSnap.data()!;
+
+    if (!timezone) {
+      throw new HttpsError("failed-precondition", "User timezone not set");
+    }
+
+    // Get valid Google access token (auto refresh)
     let accessToken: string;
     try {
       accessToken = await getValidGoogleAccessToken(uid);
@@ -38,7 +52,7 @@ export const getBusyEvents = onCall(
       );
     }
 
-    // 📅 Google FreeBusy
+    // Google FreeBusy API
     const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
       method: "POST",
       headers: {
@@ -55,19 +69,21 @@ export const getBusyEvents = onCall(
     if (!res.ok) {
       const text = await res.text();
       console.error("Google freeBusy error:", res.status, text);
-
       throw new HttpsError("internal", `Google API error ${res.status}`);
     }
 
     const data = await res.json();
-
     const busy = data?.calendars?.primary?.busy;
 
     if (!Array.isArray(busy)) {
       console.warn("Unexpected freeBusy response:", data);
-      return [];
+      return { timezone, busy: [] };
     }
 
-    return busy;
+    // Single source of truth response
+    return {
+      timezone,
+      busy,
+    };
   },
 );

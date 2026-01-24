@@ -15,6 +15,13 @@ export { oauthGoogleStart } from "./oauth/googleStart";
 export { oauthGoogleCallback } from "./oauth/googleCallback";
 export { getBusyEvents } from "./calendar/getBusyEvents";
 
+//Back nedded to use in frontend
+export * from "./calendar/getBusyEvents";
+export * from "./calendar/getAvailableSlots";
+export * from "./calendar/refreshGoogleToken";
+export * from "./oauth/googleCallback";
+export * from "./oauth/googleStart";
+
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
