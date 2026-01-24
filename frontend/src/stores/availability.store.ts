@@ -58,6 +58,7 @@ export const useAvailabilityStore = defineStore('availability', {
       saturday: { enabled: true, ranges: [{ ...DEFAULT_RANGE }] },
       sunday: { enabled: false, ranges: [] },
     } as WeeklySchedule,
+    hydrated: false,
     errors: {} as Partial<Record<Day, string>>,
     loading: false,
   }),
@@ -81,6 +82,7 @@ export const useAvailabilityStore = defineStore('availability', {
       }
 
       this.loading = false
+      this.hydrated = true
     },
 
     validateDay(day: Day): boolean {
