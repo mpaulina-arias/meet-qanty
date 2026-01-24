@@ -34,6 +34,12 @@ const router = createRouter({
       component: () => import('@/views/dashboard/AvailabilityView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/meetings30min',
+      name: 'meetings30min',
+      component: () => import('@/views/meetings/Meetings30minView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
