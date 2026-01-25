@@ -4,10 +4,14 @@ import { getValidGoogleAccessToken } from "./refreshGoogleToken";
 import { generateAvailableRanges } from "../availability/generateAvailableRanges";
 import { minutesToTime } from "../availability/time";
 
+/* =========================
+   HELPERS
+========================= */
+
 function getWeekdayInTimezone(date: string, timezone: string): string {
   const [y, m, d] = date.split("-").map(Number);
 
-  const utcDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)); // 👈 mediodía UTC
+  const utcDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)); // mediodía UTC
 
   return utcDate
     .toLocaleDateString("en-US", {
@@ -27,24 +31,51 @@ function dayRangeInTimezone(date: string, timezone: string) {
   };
 }
 
+function rfc3339ToLocalMinutes(dateStr: string, timezone: string): number {
+  const d = new Date(dateStr);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: timezone,
+  }).formatToParts(d);
+
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  return h * 60 + m;
+}
+
+/* =========================
+   FUNCTION
+========================= */
+
 export const getAvailableSlots = onCall(
   {
     region: "us-central1",
     secrets: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   },
   async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) {
-      throw new HttpsError("unauthenticated", "Not authenticated");
-    }
-
-    const { date, duration = 30 } = request.data ?? {};
+    const { date, duration = 30, ownerUid } = request.data ?? {};
 
     if (!date || typeof date !== "string") {
       throw new HttpsError("invalid-argument", "date is required");
     }
 
-    // User profile
+    // 🔑 Resolver UID (privado o público)
+    const uid =
+      request.auth?.uid ?? (typeof ownerUid === "string" ? ownerUid : null);
+
+    if (!uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "ownerUid required for public access",
+      );
+    }
+
+    /* =========================
+       USER
+    ========================= */
+
     const userSnap = await db.collection("users").doc(uid).get();
     if (!userSnap.exists) {
       throw new HttpsError("not-found", "User not found");
@@ -55,10 +86,14 @@ export const getAvailableSlots = onCall(
       throw new HttpsError("failed-precondition", "Timezone missing");
     }
 
-    // Work schedule
+    /* =========================
+       WORK SCHEDULE
+    ========================= */
+
     const scheduleSnap = await db.collection("work_schedules").doc(uid).get();
+
     if (!scheduleSnap.exists) {
-      throw new HttpsError("failed-precondition", "Work schedule not defined");
+      return []; // sin horario → sin slots
     }
 
     const schedule = scheduleSnap.data()!;
@@ -69,10 +104,11 @@ export const getAvailableSlots = onCall(
       return [];
     }
 
-    // Google token
-    const accessToken = await getValidGoogleAccessToken(uid);
+    /* =========================
+       GOOGLE CALENDAR
+    ========================= */
 
-    // Busy events
+    const accessToken = await getValidGoogleAccessToken(uid);
     const { timeMin, timeMax } = dayRangeInTimezone(date, timezone);
 
     const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
@@ -95,32 +131,20 @@ export const getAvailableSlots = onCall(
     const data = await res.json();
     const busyRaw = data?.calendars?.primary?.busy ?? [];
 
-    function rfc3339ToLocalMinutes(dateStr: string, timezone: string): number {
-      const d = new Date(dateStr);
-      const parts = new Intl.DateTimeFormat("en-US", {
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: timezone,
-      }).formatToParts(d);
-
-      const h = Number(parts.find((p) => p.type === "hour")?.value);
-      const m = Number(parts.find((p) => p.type === "minute")?.value);
-      return h * 60 + m;
-    }
-
     const busyRanges = busyRaw.map((b: { start: string; end: string }) => ({
       startMin: rfc3339ToLocalMinutes(b.start, timezone),
       endMin: rfc3339ToLocalMinutes(b.end, timezone),
     }));
 
-    // Availability calculation
+    /* =========================
+       AVAILABILITY
+    ========================= */
+
     const availableRanges = generateAvailableRanges(
       daySchedule.ranges,
       busyRanges,
     );
 
-    // Split into slots
     const slots: { start: string; end: string }[] = [];
 
     for (const range of availableRanges) {

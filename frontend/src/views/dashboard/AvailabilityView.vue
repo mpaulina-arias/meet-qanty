@@ -84,9 +84,8 @@ const testAvailableSlots = async () => {
     // En getBusyEvents se espera un start y end en ISO string
     const start = `${dateStr}T00:00:00Z`
     const end = `${dateStr}T23:59:59.999Z`
-
     const busyRes = await fnBusy({ start, end })
-    console.log('BUSY EVENTS:', busyRes.data.busy)
+    console.log('BUSY EVENTS:', busyRes.data)
   } catch (err: any) {
     console.error(err)
     error.value = err.message ?? 'Error obteniendo disponibilidad'

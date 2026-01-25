@@ -31,10 +31,9 @@ const router = createRouter({
      * /mpaulina-arias-udea/meetings/30min
      */
     {
-      path: '/:slug/meetings/30min',
-      name: 'public-meeting-30min',
-      component: () => import('@/views/meetings/Meetings30minView.vue'),
-      props: true,
+      path: '/:userSlug/meetings/:eventSlug',
+      name: 'public-meeting',
+      component: () => import('@/views/public/PublicMeetingView.vue'),
     },
 
     /* =====================
@@ -62,9 +61,15 @@ const router = createRouter({
     },
 
     {
-      path: '/availability',
+      path: '/dashboard/availability',
       name: 'availability',
       component: () => import('@/views/dashboard/AvailabilityView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/dashboard/scheduling',
+      name: 'scheduling',
+      component: () => import('@/views/dashboard/SchedulingView.vue'),
       meta: { requiresAuth: true },
     },
   ],

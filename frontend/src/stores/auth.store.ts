@@ -9,7 +9,7 @@ import {
   onAuthStateChanged,
   type User as FirebaseUser,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 
 export interface AuthUser {
@@ -103,16 +103,46 @@ export const useAuthStore = defineStore('auth', {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }
 
+        // Crear usuario en Firestore
         await setDoc(userRef, {
           ...newUser,
           createdAt: serverTimestamp(),
           isActive: true,
         })
 
+        // Crear evento por defecto (30min meetings)
+        await this.createDefaultEvent(firebaseUser.uid)
+
         this.user = newUser
       } else {
         this.user = snap.data() as AuthUser
       }
+    },
+
+    async createDefaultEvent(uid: string) {
+      const slug = '30min'
+      const eventRef = doc(db, 'event_types', `${uid}_${slug}`)
+
+      await setDoc(eventRef, {
+        ownerUid: uid,
+
+        name: '30 Minute Meeting',
+        slug,
+
+        description: 'Reunión de 30 minutos',
+        duration: 30,
+
+        visibility: 'public',
+        isActive: true,
+
+        location: {
+          type: 'google_meet',
+        },
+
+        scheduling: {},
+
+        createdAt: serverTimestamp(),
+      })
     },
 
     mapProvider(providerId?: string): 'google' | 'microsoft' {
