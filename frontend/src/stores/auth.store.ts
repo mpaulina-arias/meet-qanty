@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { buildEventType } from '@/services/eventFactory'
 
 export interface AuthUser {
   uid: string
@@ -123,26 +124,16 @@ export const useAuthStore = defineStore('auth', {
       const slug = '30min'
       const eventRef = doc(db, 'event_types', `${uid}_${slug}`)
 
-      await setDoc(eventRef, {
-        ownerUid: uid,
-
-        name: '30 Minute Meeting',
-        slug,
-
-        description: 'Reunión de 30 minutos',
-        duration: 30,
-
-        visibility: 'public',
-        isActive: true,
-
-        location: {
-          type: 'google_meet',
-        },
-
-        scheduling: {},
-
-        createdAt: serverTimestamp(),
-      })
+      await setDoc(
+        eventRef,
+        buildEventType({
+          ownerUid: uid,
+          name: '30 Minute Meeting',
+          slug,
+          description: 'Reunión de 30 minutos',
+          duration: 30,
+        }),
+      )
     },
 
     mapProvider(providerId?: string): 'google' | 'microsoft' {

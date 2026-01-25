@@ -34,9 +34,72 @@
 
     <!-- BOTÓN CREAR -->
     <div class="mb-6">
-      <button class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700">
+      <button
+        class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700"
+        @click="showCreateModal = true"
+      >
         Crear
       </button>
+    </div>
+
+    <div
+      v-if="showCreateModal"
+      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg w-full max-w-md p-6">
+        <h2 class="text-lg font-semibold mb-4">Nuevo tipo de evento</h2>
+
+        <!-- Nombre -->
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Nombre</label>
+          <input
+            v-model="form.name"
+            class="border rounded w-full px-3 py-2"
+            placeholder="Ej: 45 Minute Meeting"
+          />
+        </div>
+
+        <!-- Duración -->
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Duración</label>
+          <div class="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              v-model.number="form.durationValue"
+              class="border rounded px-3 py-2 w-24"
+            />
+
+            <select v-model="form.durationUnit" class="border rounded px-3 py-2">
+              <option value="min">minutos</option>
+              <option value="hour">horas</option>
+            </select>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-1">Total: {{ durationInMinutes }} minutos</p>
+        </div>
+
+        <!-- Preview link -->
+        <div v-if="previewLink" class="mb-4 text-sm">
+          <p class="text-gray-500">Enlace público</p>
+          <p class="text-blue-600 break-all">
+            {{ previewLink }}
+          </p>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex justify-end gap-3">
+          <button class="text-sm text-gray-600" @click="showCreateModal = false">Cancelar</button>
+
+          <button
+            class="bg-blue-600 text-white px-4 py-2 rounded"
+            :disabled="creating"
+            @click="handleCreate"
+          >
+            Crear evento
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- LISTA DE EVENTOS -->
@@ -56,11 +119,7 @@
             {{ event.name }}
           </h3>
 
-          <p class="text-sm text-gray-600 mt-1">
-            {{ event.duration }} min • Google Meet • En privado
-          </p>
-
-          <p class="text-xs text-gray-500 mt-2">Lun, Mar, Mié, Jue, Vie, Sáb, 09:00 - 17:00</p>
+          <p class="text-sm text-gray-600 mt-1">{{ event.duration }} min</p>
         </div>
 
         <!-- ACCIONES -->
@@ -79,10 +138,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
+import { createEvent } from '@/services/events'
+import { generateEventTypeSlug } from '@/utils/eventSlug'
 
 interface EventType {
   id: string
@@ -92,10 +153,45 @@ interface EventType {
 }
 
 const auth = useAuthStore()
+
 const loading = ref(false)
+const creating = ref(false)
 const events = ref<EventType[]>([])
 
-onMounted(async () => {
+const showCreateModal = ref(false)
+
+const form = ref({
+  name: '',
+  durationValue: 30,
+  durationUnit: 'min' as 'min' | 'hour',
+})
+
+/* =========================
+   DURACIÓN
+========================= */
+const durationInMinutes = computed(() => {
+  return form.value.durationUnit === 'hour'
+    ? form.value.durationValue * 60
+    : form.value.durationValue
+})
+
+/* =========================
+   PREVIEW LINK
+========================= */
+const previewSlug = computed(() => {
+  if (!form.value.name) return ''
+  return generateEventTypeSlug(form.value.name)
+})
+
+const previewLink = computed(() => {
+  if (!auth.user?.publicSlug || !previewSlug.value) return ''
+  return `/${auth.user.publicSlug}/meetings/${previewSlug.value}`
+})
+
+/* =========================
+   LOAD EVENTS
+========================= */
+const loadEvents = async () => {
   if (!auth.user) return
 
   loading.value = true
@@ -114,14 +210,61 @@ onMounted(async () => {
   }))
 
   loading.value = false
-})
+}
 
+/* ✅ CLAVE: esperar a que auth.user exista */
+watch(
+  () => auth.user,
+  (user) => {
+    if (user) {
+      loadEvents()
+    }
+  },
+  { immediate: true },
+)
+
+/* =========================
+   CREATE EVENT
+========================= */
+const handleCreate = async () => {
+  if (!form.value.name) {
+    alert('Ingresa un nombre')
+    return
+  }
+
+  try {
+    creating.value = true
+
+    await createEvent({
+      name: form.value.name,
+      duration: durationInMinutes.value,
+    })
+
+    showCreateModal.value = false
+
+    form.value = {
+      name: '',
+      durationValue: 30,
+      durationUnit: 'min',
+    }
+
+    await loadEvents()
+  } catch (err: any) {
+    alert(err.message)
+  } finally {
+    creating.value = false
+  }
+}
+
+/* =========================
+   COPY LINK
+========================= */
 const copyLink = async (eventSlug: string) => {
   if (!auth.user?.publicSlug) return
 
   const url = `${window.location.origin}/${auth.user.publicSlug}/meetings/${eventSlug}`
-
   await navigator.clipboard.writeText(url)
+
   alert('Enlace copiado al portapapeles')
 }
 </script>
