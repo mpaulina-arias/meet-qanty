@@ -25,7 +25,7 @@
       <p class="text-sm text-gray-500">
         Ejemplo:
         <br />
-        <strong> meet-qanty.web.app/{{ slug || 'tu-enlace' }}/meetings/30min </strong>
+        <strong>meet-qanty.web.app/{{ slug || 'tu-enlace' }}/meetings/30min</strong>
       </p>
 
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Guardar enlace</button>
@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { collection, getDocs, query, where, doc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
@@ -45,9 +45,9 @@ const slug = ref('')
 const error = ref<string | null>(null)
 
 /**
- * Cargar siempre desde Firestore
+ * Cargar slug desde Firestore
  */
-onMounted(async () => {
+const loadSlug = async () => {
   if (!auth.user) return
 
   const refDoc = doc(db, 'users', auth.user.uid)
@@ -56,7 +56,25 @@ onMounted(async () => {
   if (snap.exists()) {
     slug.value = snap.data().publicSlug ?? ''
   }
-})
+}
+
+/**
+ * Intento inicial
+ */
+onMounted(loadSlug)
+
+/**
+ * Reintento cuando auth.user se hidrate
+ */
+watch(
+  () => auth.user,
+  (user) => {
+    if (user) {
+      loadSlug()
+    }
+  },
+  { immediate: true },
+)
 
 /**
  * Confirmación
@@ -87,7 +105,6 @@ const save = async () => {
 
   // verificar unicidad
   const q = query(collection(db, 'users'), where('publicSlug', '==', cleanSlug))
-
   const snap = await getDocs(q)
 
   const conflict = snap.docs.some((d) => d.id !== auth.user!.uid)
