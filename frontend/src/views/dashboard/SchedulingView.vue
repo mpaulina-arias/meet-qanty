@@ -23,7 +23,7 @@
 
         <a
           v-if="auth.user?.publicSlug"
-          :href="`/${auth.user.publicSlug}/meetings/30min`"
+          :href="`/${auth.user.publicSlug}/meetings`"
           target="_blank"
           class="text-sm text-blue-600 hover:underline"
         >

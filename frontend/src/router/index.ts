@@ -35,6 +35,11 @@ const router = createRouter({
       name: 'public-meeting',
       component: () => import('@/views/public/PublicMeetingView.vue'),
     },
+    {
+      path: '/:userSlug/meetings',
+      name: 'public-meetings',
+      component: () => import('@/views/public/PublicMeetingEventsView.vue'),
+    },
 
     /* =====================
        PRIVADAS (DASHBOARD)
