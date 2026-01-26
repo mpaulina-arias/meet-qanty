@@ -48,15 +48,32 @@
           Guardar cambios
         </button>
       </div>
+
+      <hr class="my-10" />
+
+      <div class="bg-red-50 border border-red-200 p-5 rounded-lg">
+        <h3 class="text-red-700 font-semibold mb-2">Zona peligrosa</h3>
+        <p class="text-sm text-red-600 mb-4">
+          Esta acción eliminará tu cuenta y desactivará todos tus eventos públicos.
+        </p>
+
+        <button
+          @click="confirmDelete"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+        >
+          Eliminar cuenta
+        </button>
+      </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
+import { deleteUser, getAuth } from 'firebase/auth'
 
 const auth = useAuthStore()
 
@@ -95,5 +112,56 @@ const save = async () => {
   auth.user.timezone = form.value.timezone
 
   alert('Perfil actualizado')
+}
+
+const confirmDelete = async () => {
+  if (!auth.user) return
+
+  const ok = confirm(
+    '¿Seguro que quieres eliminar tu cuenta?\n\n' +
+      '• Se desactivarán todos tus eventos\n' +
+      '• Nadie podrá agendar nuevas reuniones\n' +
+      '• Esta acción NO se puede deshacer',
+  )
+
+  if (!ok) return
+
+  try {
+    await deleteAccountFlow()
+    alert('Cuenta eliminada correctamente')
+  } catch (err) {
+    console.error(err)
+    alert('Error eliminando la cuenta. Es posible que debas volver a iniciar sesión.')
+  }
+}
+
+const deleteAccountFlow = async () => {
+  if (!auth.user) return
+
+  const uid = auth.user.uid
+
+  /* Desactivar todos los eventos */
+  const eventsSnap = await getDocs(
+    query(collection(db, 'event_types'), where('ownerUid', '==', uid)),
+  )
+
+  const updates = eventsSnap.docs.map((docSnap) => updateDoc(docSnap.ref, { isActive: false }))
+
+  await Promise.all(updates)
+
+  /*  Borrar documento del usuario */
+  await deleteDoc(doc(db, 'users', uid))
+
+  /*  Borrar usuario de Firebase Auth */
+  const firebaseUser = getAuth().currentUser
+  if (firebaseUser) {
+    await deleteUser(firebaseUser)
+  }
+  
+  /* Limpiar estado local */
+  auth.user = null
+
+  /* Redirigir al home */
+  window.location.href = '/'
 }
 </script>
