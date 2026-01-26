@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useAvailabilityStore, DAYS, type Day } from '@/stores/availability.store'
 import { getTimeZones } from '@/utils/timezones'
 import { httpsCallable } from 'firebase/functions'
@@ -31,10 +31,6 @@ const availableSlots = ref<Slot[]>([])
 /* =======================
    GOOGLE CALENDAR
 ======================= */
-
-/**
- * Verifica si el usuario ya conectó Google Calendar
- */
 const checkGoogleConnection = async () => {
   if (!auth.user) return
 
@@ -44,9 +40,6 @@ const checkGoogleConnection = async () => {
   googleConnected.value = snap.exists()
 }
 
-/**
- * Inicia OAuth (DEV o PROD)
- */
 const connectGoogleCalendar = () => {
   if (!auth.user) return
 
@@ -58,9 +51,6 @@ const connectGoogleCalendar = () => {
     `?uid=${auth.user.uid}&env=${env}`
 }
 
-/**
- * Prueba slots disponibles (backend)
- */
 const testAvailableSlots = async () => {
   if (!googleConnected.value) return
 
@@ -68,23 +58,19 @@ const testAvailableSlots = async () => {
   error.value = null
 
   try {
-    // Llamadas a las funciones
     const fnSlots = httpsCallable(functions, 'getAvailableSlots')
     const fnBusy = httpsCallable(functions, 'getBusyEvents')
 
-    const dateStr = '2026-01-27' // YYYY-MM-DD
-    const duration = 30 // minutos
+    const dateStr = '2026-01-27'
+    const duration = 30
 
-    // Llamamos a getAvailableSlots
     const slotsRes = await fnSlots({ date: dateStr, duration })
     availableSlots.value = slotsRes.data as Slot[]
-    console.log('AVAILABLE SLOTS:', availableSlots.value)
 
-    // Llamamos a getBusyEvents para ver qué ocupa el Google Calendar
-    // En getBusyEvents se espera un start y end en ISO string
     const start = `${dateStr}T00:00:00Z`
     const end = `${dateStr}T23:59:59.999Z`
     const busyRes = await fnBusy({ start, end })
+
     console.log('BUSY EVENTS:', busyRes.data)
   } catch (err: any) {
     console.error(err)
@@ -95,18 +81,15 @@ const testAvailableSlots = async () => {
 }
 
 /* =======================
-   LIFECYCLE
+   AUTH-DEPENDENT LOAD
 ======================= */
-onMounted(() => {
-  availability.loadSchedule()
-})
-
 watch(
   () => auth.user,
   async (user) => {
-    if (user) {
-      await checkGoogleConnection()
-    }
+    if (!user) return
+
+    await availability.loadSchedule()
+    await checkGoogleConnection()
   },
   { immediate: true },
 )
