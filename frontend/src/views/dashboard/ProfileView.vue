@@ -9,18 +9,12 @@
       <div>
         <label class="block font-medium mb-1">Avatar</label>
         <img v-if="form.photoUrl" :src="form.photoUrl" class="w-20 h-20 rounded-full mb-2" />
-        <p class="text-sm text-gray-500">La imagen viene del proveedor (Google / Microsoft)</p>
       </div>
 
       <!-- Nombre -->
       <div>
         <label class="block font-medium mb-1">Nombre</label>
-        <input
-          :value="auth.user?.name"
-          type="text"
-          class="w-full border rounded px-3 py-2"
-          required
-        />
+        <input v-model="form.name" type="text" class="w-full border rounded px-3 py-2" required />
       </div>
 
       <!-- Email -->
@@ -36,11 +30,22 @@
       <!-- Zona horaria -->
       <div>
         <label class="block font-medium mb-1">Zona horaria</label>
-        <select :value="auth.user?.timezone" class="w-full border rounded px-3 py-2">
+        <select v-model="form.timezone" class="w-full border rounded px-3 py-2">
           <option v-for="tz in timezones" :key="tz" :value="tz">
             {{ tz }}
           </option>
         </select>
+      </div>
+
+      <!-- Mensaje de bienvenida -->
+      <div>
+        <label class="block font-medium mb-1">Mensaje de bienvenida</label>
+        <textarea
+          v-model="form.welcomeMessage"
+          rows="3"
+          class="w-full border rounded px-3 py-2"
+          placeholder="Este mensaje se muestra en tu página pública"
+        />
       </div>
 
       <div class="flex gap-3">
@@ -74,18 +79,17 @@ import { doc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'fi
 import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
 import { deleteUser, getAuth } from 'firebase/auth'
+import { getTimeZones } from '@/utils/timezones'
 
 const auth = useAuthStore()
+const timezones = getTimeZones()
 
 const form = ref({
   name: '',
   photoUrl: '',
   timezone: '',
+  welcomeMessage: '',
 })
-
-const timezones = Intl.DateTimeFormat().resolvedOptions().timeZone
-  ? [Intl.DateTimeFormat().resolvedOptions().timeZone]
-  : ['UTC']
 
 onMounted(() => {
   if (!auth.user) return
@@ -94,6 +98,7 @@ onMounted(() => {
     name: auth.user.name,
     photoUrl: auth.user.photoUrl ?? '',
     timezone: auth.user.timezone,
+    welcomeMessage: auth.user.welcomeMessage ?? '',
   }
 })
 
@@ -105,11 +110,13 @@ const save = async () => {
   await updateDoc(refDoc, {
     name: form.value.name,
     timezone: form.value.timezone,
+    welcomeMessage: form.value.welcomeMessage,
   })
 
   // sync local store
   auth.user.name = form.value.name
   auth.user.timezone = form.value.timezone
+  auth.user.welcomeMessage = form.value.welcomeMessage
 
   alert('Perfil actualizado')
 }
@@ -157,7 +164,7 @@ const deleteAccountFlow = async () => {
   if (firebaseUser) {
     await deleteUser(firebaseUser)
   }
-  
+
   /* Limpiar estado local */
   auth.user = null
 

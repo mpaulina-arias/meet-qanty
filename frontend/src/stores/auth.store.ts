@@ -21,6 +21,8 @@ export interface AuthUser {
   provider: 'google' | 'microsoft'
   publicSlug: string
   timezone: string
+
+  welcomeMessage?: string
 }
 
 interface AuthState {
@@ -102,6 +104,8 @@ export const useAuthStore = defineStore('auth', {
           provider: this.mapProvider(firebaseUser.providerData[0]?.providerId),
           publicSlug: this.generateSlug(firebaseUser.email),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+
+          welcomeMessage: 'Hola!Agenda una reunión conmigo cuando quieras.',
         }
 
         // Crear usuario en Firestore
