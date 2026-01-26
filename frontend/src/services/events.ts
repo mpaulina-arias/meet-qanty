@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
 import { generateEventTypeSlug as generateSlug } from '@/utils/eventSlug'
@@ -33,7 +33,6 @@ export async function createEvent(input: CreateEventInput) {
       ownerUid: auth.user.uid,
       name: input.name,
       slug,
-      description: input.description,
       duration: input.duration,
     }),
   )
@@ -42,4 +41,35 @@ export async function createEvent(input: CreateEventInput) {
     id: eventId,
     slug,
   }
+}
+
+/* =========================
+   UPDATE EVENT
+========================= */
+export async function updateEvent(
+  eventId: string,
+  data: {
+    name: string
+    duration: number
+  },
+) {
+  const ref = doc(db, 'event_types', eventId)
+
+  await updateDoc(ref, {
+    name: data.name,
+    duration: data.duration,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+/* =========================
+   SOFT DELETE EVENT
+========================= */
+export async function deactivateEvent(eventId: string) {
+  const ref = doc(db, 'event_types', eventId)
+
+  await updateDoc(ref, {
+    isActive: false,
+    deactivatedAt: serverTimestamp(),
+  })
 }

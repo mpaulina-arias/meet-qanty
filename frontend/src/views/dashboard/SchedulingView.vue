@@ -102,6 +102,43 @@
       </div>
     </div>
 
+    <div
+      v-if="showEditModal"
+      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg w-full max-w-md p-6">
+        <h2 class="text-lg font-semibold mb-4">Editar evento</h2>
+
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Nombre</label>
+          <input v-model="editForm.name" class="border rounded w-full px-3 py-2" />
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Duración</label>
+          <input
+            type="number"
+            min="1"
+            v-model.number="editForm.duration"
+            class="border rounded w-full px-3 py-2"
+          />
+          <p class="text-xs text-gray-500 mt-1">Minutos</p>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button class="text-sm text-gray-600" @click="showEditModal = false">Cancelar</button>
+
+          <button
+            class="bg-blue-600 text-white px-4 py-2 rounded"
+            :disabled="editing"
+            @click="handleUpdate"
+          >
+            Guardar cambios
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- LISTA DE EVENTOS -->
     <div v-if="loading" class="text-gray-500">Cargando eventos...</div>
 
@@ -119,13 +156,23 @@
             {{ event.name }}
           </h3>
 
-          <p class="text-sm text-gray-600 mt-1">{{ event.duration }} min</p>
+          <p class="text-sm text-gray-600 mt-1">
+            {{ event.duration }} min - {{ event.location.type }}
+          </p>
         </div>
 
         <!-- ACCIONES -->
-        <div class="flex flex-col items-end gap-3">
+        <div class="flex flex-col items-end gap-2">
           <button class="text-sm text-blue-600 hover:underline" @click="copyLink(event.slug)">
             Copiar enlace
+          </button>
+
+          <button class="text-sm text-gray-600 hover:underline" @click="openEdit(event)">
+            Editar
+          </button>
+
+          <button class="text-sm text-red-600 hover:underline" @click="removeEvent(event)">
+            Eliminar
           </button>
 
           <span class="text-xs text-gray-400">
@@ -144,12 +191,17 @@ import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
 import { createEvent } from '@/services/events'
 import { generateEventTypeSlug } from '@/utils/eventSlug'
+import { updateEvent, deactivateEvent } from '@/services/events'
 
 interface EventType {
   id: string
   name: string
   slug: string
   duration: number
+  location: {
+    type: string
+    details?: string
+  }
 }
 
 const auth = useAuthStore()
@@ -266,5 +318,69 @@ const copyLink = async (eventSlug: string) => {
   await navigator.clipboard.writeText(url)
 
   alert('Enlace copiado al portapapeles')
+}
+
+const showEditModal = ref(false)
+const editing = ref(false)
+
+const editForm = ref({
+  id: '',
+  name: '',
+  duration: 30,
+})
+
+const openEdit = (event: EventType) => {
+  editForm.value = {
+    id: event.id,
+    name: event.name,
+    duration: event.duration,
+  }
+
+  showEditModal.value = true
+}
+
+const handleUpdate = async () => {
+  if (!editForm.value.name) {
+    alert('Ingresa un nombre')
+    return
+  }
+
+  if (!editForm.value.duration) {
+    alert('Ingresa una duración')
+    return
+  }
+
+  try {
+    editing.value = true
+
+    await updateEvent(editForm.value.id, {
+      name: editForm.value.name,
+      duration: editForm.value.duration,
+    })
+
+    showEditModal.value = false
+
+    await loadEvents()
+  } catch (err: any) {
+    alert(err.message)
+  } finally {
+    editing.value = false
+  }
+}
+
+const removeEvent = async (event: EventType) => {
+  const confirmed = confirm(
+    `¿Está seguro que desea eliminar este evento?\n\n` +
+      `Los usuarios no podrán programar más reuniones con los tipos de eventos eliminados. ` +
+      `Las reuniones programadas con anterioridad no se verán afectadas.`,
+  )
+  if (!confirmed) return
+
+  try {
+    await deactivateEvent(event.id)
+    await loadEvents()
+  } catch (err: any) {
+    alert(err.message)
+  }
 }
 </script>

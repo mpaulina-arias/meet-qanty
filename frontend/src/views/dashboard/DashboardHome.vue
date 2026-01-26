@@ -30,7 +30,6 @@ const logout = async () => {
       <h1>Dashboard</h1>
       <p>Bienvenida 👋</p>
 
-      <!-- Aquí luego pones cards, links, etc -->
       <ul>
         <li>
           <router-link to="/dashboard/availability"> Configurar disponibilidad </router-link>
