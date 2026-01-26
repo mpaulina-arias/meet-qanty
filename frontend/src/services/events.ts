@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuthStore } from '@/stores/auth.store'
-import { generateEventTypeSlug as generateSlug } from '@/utils/eventSlug'
+import { generateEventTypeSlug } from '@/utils/eventSlug'
 import { buildEventType } from './eventFactory'
 
 interface CreateEventInput {
@@ -17,7 +17,7 @@ export async function createEvent(input: CreateEventInput) {
     throw new Error('User not authenticated')
   }
 
-  const slug = generateSlug(input.name)
+  const slug = generateEventTypeSlug(input.name)
   const eventId = `${auth.user.uid}_${slug}`
 
   const ref = doc(db, 'event_types', eventId)

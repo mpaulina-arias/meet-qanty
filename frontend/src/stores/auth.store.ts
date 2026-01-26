@@ -100,7 +100,7 @@ export const useAuthStore = defineStore('auth', {
           name: firebaseUser.displayName ?? '',
           photoUrl: firebaseUser.photoURL ?? undefined,
           provider: this.mapProvider(firebaseUser.providerData[0]?.providerId),
-          publicSlug: this.generateSlug(firebaseUser.displayName),
+          publicSlug: this.generateSlug(firebaseUser.email),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }
 
@@ -142,15 +142,16 @@ export const useAuthStore = defineStore('auth', {
       return 'google'
     },
 
-    generateSlug(name?: string | null): string {
-      if (!name) return 'user'
+    generateSlug(email?: string | null): string {
+      if (!email) return 'user'
 
-      return name
+      return email
         .toLowerCase()
-        .normalize('NFD')
+        .normalize('NFD') // quita acentos raros si existieran
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '')
+        .replace(/@/g, '') // quita @
+        .replace(/\./g, '') // quita puntos
+        .replace(/[^a-z0-9]/g, '') // solo letras y números
     },
   },
 })
