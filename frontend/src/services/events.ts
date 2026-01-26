@@ -8,6 +8,15 @@ interface CreateEventInput {
   name: string
   duration: number
   description?: string
+
+  kind: 'one_on_one' | 'group'
+
+  location: {
+    type: 'google_meet' | 'presencial' | 'custom'
+    details?: string
+  }
+
+  capacity?: number // solo group
 }
 
 export async function createEvent(input: CreateEventInput) {
@@ -34,6 +43,12 @@ export async function createEvent(input: CreateEventInput) {
       name: input.name,
       slug,
       duration: input.duration,
+      description: input.description,
+      kind: input.kind,
+      location: input.location?.details
+        ? { type: input.location.type, details: input.location.details }
+        : { type: input.location.type },
+      capacity: input.capacity,
     }),
   )
 
@@ -51,15 +66,39 @@ export async function updateEvent(
   data: {
     name: string
     duration: number
+    location: {
+      type: 'google_meet' | 'presencial' | 'custom'
+      details?: string
+    }
+    kind: 'one_on_one' | 'group'
+    capacity?: number
   },
 ) {
   const ref = doc(db, 'event_types', eventId)
 
-  await updateDoc(ref, {
+  const location: any = {
+    type: data.location.type,
+  }
+
+  //Solo agregar details si realmente existe
+  if (data.location.details && data.location.details.trim() !== '') {
+    location.details = data.location.details
+  }
+
+  const updatePayload: any = {
     name: data.name,
     duration: data.duration,
+    location,
+    kind: data.kind,
     updatedAt: serverTimestamp(),
-  })
+  }
+
+  // Solo guardar capacity si es evento grupal
+  if (data.kind === 'group' && data.capacity) {
+    updatePayload.capacity = data.capacity
+  }
+
+  await updateDoc(ref, updatePayload)
 }
 
 /* =========================

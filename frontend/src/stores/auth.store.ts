@@ -136,6 +136,10 @@ export const useAuthStore = defineStore('auth', {
           slug,
           description: 'Reunión de 30 minutos',
           duration: 30,
+          kind: 'one_on_one',
+          location: {
+            type: 'google_meet',
+          },
         }),
       )
     },

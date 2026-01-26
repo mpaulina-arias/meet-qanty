@@ -6,6 +6,14 @@ interface BuildEventInput {
   slug: string
   duration: number
   description?: string
+  kind: 'one_on_one' | 'group'
+
+  location: {
+    type: 'google_meet' | 'presencial' | 'custom'
+    details?: string
+  }
+
+  capacity?: number // solo group
 }
 
 export function buildEventType(input: BuildEventInput) {
@@ -17,6 +25,8 @@ export function buildEventType(input: BuildEventInput) {
     description: input.description ?? '',
     duration: input.duration,
 
+    kind: input.kind,
+
     visibility: 'public',
     isActive: true,
 
@@ -24,8 +34,11 @@ export function buildEventType(input: BuildEventInput) {
       type: 'google_meet',
     },
 
+    capacity: input.kind === 'group' ? (input.capacity ?? 10) : null,
+
     scheduling: {},
 
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   }
 }

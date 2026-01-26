@@ -160,6 +160,11 @@ onMounted(async () => {
 
     event.value = eventData as EventType
 
+    // event.value = {
+    //   ...(eventData as EventType),
+    //   ownerUid: userDoc.id, //  asegurar que siempre exista
+    // }
+
     console.log('Event loaded:', event.value)
   } catch (err) {
     console.error('Error loading public meeting view:', err)

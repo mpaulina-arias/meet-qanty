@@ -49,6 +49,31 @@
       <div class="bg-white rounded-lg w-full max-w-md p-6">
         <h2 class="text-lg font-semibold mb-4">Nuevo tipo de evento</h2>
 
+        <!-- Tipo de reunión -->
+        <div class="mb-4">
+          <label class="block text-sm mb-2 font-semibold">Tipo de reunión</label>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              class="border rounded px-3 py-2 text-sm"
+              :class="form.kind === 'one_on_one' ? 'border-black font-semibold' : 'text-gray-500'"
+              @click="form.kind = 'one_on_one'"
+            >
+              1 a 1
+            </button>
+
+            <button
+              type="button"
+              class="border rounded px-3 py-2 text-sm"
+              :class="form.kind === 'group' ? 'border-black font-semibold' : 'text-gray-500'"
+              @click="form.kind = 'group'"
+            >
+              Grupo
+            </button>
+          </div>
+        </div>
+
         <!-- Nombre -->
         <div class="mb-4">
           <label class="block text-sm mb-1">Nombre</label>
@@ -77,6 +102,35 @@
           </div>
 
           <p class="text-xs text-gray-500 mt-1">Total: {{ durationInMinutes }} minutos</p>
+        </div>
+
+        <!-- Ubicación -->
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Ubicación</label>
+
+          <select v-model="form.locationType" class="border rounded w-full px-3 py-2">
+            <option value="google_meet">Google Meet</option>
+            <option value="presencial">Presencial</option>
+            <option value="custom">Personalizada</option>
+          </select>
+
+          <input
+            v-if="form.locationType === 'custom'"
+            v-model="form.locationDetails"
+            class="border rounded w-full px-3 py-2 mt-2"
+            placeholder="Ej: Oficina 402 o enlace externo"
+          />
+        </div>
+
+        <!-- Capacidad -->
+        <div v-if="form.kind === 'group'" class="mb-4">
+          <label class="block text-sm mb-1">Límite de invitados</label>
+          <input
+            type="number"
+            min="2"
+            v-model.number="form.capacity"
+            class="border rounded w-full px-3 py-2"
+          />
         </div>
 
         <!-- Preview link -->
@@ -109,11 +163,40 @@
       <div class="bg-white rounded-lg w-full max-w-md p-6">
         <h2 class="text-lg font-semibold mb-4">Editar evento</h2>
 
+        <!-- Tipo -->
+        <div class="mb-4">
+          <label class="block text-sm mb-2 font-semibold">Tipo de reunión</label>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              class="border rounded px-3 py-2 text-sm"
+              :class="
+                editForm.kind === 'one_on_one' ? 'border-black font-semibold' : 'text-gray-500'
+              "
+              @click="editForm.kind = 'one_on_one'"
+            >
+              1 a 1
+            </button>
+
+            <button
+              type="button"
+              class="border rounded px-3 py-2 text-sm"
+              :class="editForm.kind === 'group' ? 'border-black font-semibold' : 'text-gray-500'"
+              @click="editForm.kind = 'group'"
+            >
+              Grupo
+            </button>
+          </div>
+        </div>
+
+        <!-- Nombre -->
         <div class="mb-4">
           <label class="block text-sm mb-1">Nombre</label>
           <input v-model="editForm.name" class="border rounded w-full px-3 py-2" />
         </div>
 
+        <!-- Duración -->
         <div class="mb-4">
           <label class="block text-sm mb-1">Duración</label>
           <input
@@ -125,15 +208,48 @@
           <p class="text-xs text-gray-500 mt-1">Minutos</p>
         </div>
 
-        <div class="flex justify-end gap-3">
-          <button class="text-sm text-gray-600" @click="showEditModal = false">Cancelar</button>
+        <!-- Ubicación -->
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Ubicación</label>
+
+          <select v-model="editForm.locationType" class="border rounded w-full px-3 py-2">
+            <option value="google_meet">Google Meet</option>
+            <option value="presencial">Presencial</option>
+            <option value="custom">Personalizada</option>
+          </select>
+
+          <input
+            v-if="editForm.locationType === 'custom'"
+            v-model="editForm.locationDetails"
+            class="border rounded w-full px-3 py-2 mt-2"
+            placeholder="Ej: Oficina 402 o enlace externo"
+          />
+        </div>
+
+        <!-- Capacidad -->
+        <div v-if="editForm.kind === 'group'" class="mb-4">
+          <label class="block text-sm mb-1">Límite de invitados</label>
+          <input
+            type="number"
+            min="2"
+            v-model.number="editForm.capacity"
+            class="border rounded w-full px-3 py-2"
+          />
+        </div>
+
+        <!-- ACCIONES EDITAR -->
+        <div class="flex justify-end gap-3 mt-6">
+          <button class="text-sm text-gray-600" @click="showEditModal = false" :disabled="editing">
+            Cancelar
+          </button>
 
           <button
-            class="bg-blue-600 text-white px-4 py-2 rounded"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             :disabled="editing"
             @click="handleUpdate"
           >
-            Guardar cambios
+            <span v-if="editing">Guardando...</span>
+            <span v-else>Guardar cambios</span>
           </button>
         </div>
       </div>
@@ -157,7 +273,7 @@
           </h3>
 
           <p class="text-sm text-gray-600 mt-1">
-            {{ event.duration }} min - {{ event.location.type }}
+            {{ event.duration }} min - {{ event.location.type }} - {{ event.kind }}
           </p>
         </div>
 
@@ -198,8 +314,12 @@ interface EventType {
   name: string
   slug: string
   duration: number
+
+  kind?: 'one_on_one' | 'group'
+  capacity?: number
+
   location: {
-    type: string
+    type: 'google_meet' | 'presencial' | 'custom'
     details?: string
   }
 }
@@ -214,8 +334,16 @@ const showCreateModal = ref(false)
 
 const form = ref({
   name: '',
+
+  kind: 'one_on_one' as 'one_on_one' | 'group',
+
   durationValue: 30,
   durationUnit: 'min' as 'min' | 'hour',
+
+  locationType: 'google_meet' as 'google_meet' | 'presencial' | 'custom',
+  locationDetails: '',
+
+  capacity: 10, // solo para group
 })
 
 /* =========================
@@ -264,7 +392,11 @@ const loadEvents = async () => {
   loading.value = false
 }
 
-/* ✅ CLAVE: esperar a que auth.user exista */
+function isValidLocationType(value: any): value is 'google_meet' | 'presencial' | 'custom' {
+  return ['google_meet', 'presencial', 'custom'].includes(value)
+}
+
+/* Esperar a que auth.user exista */
 watch(
   () => auth.user,
   (user) => {
@@ -290,6 +422,14 @@ const handleCreate = async () => {
     await createEvent({
       name: form.value.name,
       duration: durationInMinutes.value,
+
+      kind: form.value.kind,
+
+      location: {
+        type: form.value.locationType,
+        details: form.value.locationType === 'custom' ? form.value.locationDetails : undefined,
+      },
+      capacity: form.value.kind === 'group' ? form.value.capacity : undefined,
     })
 
     showCreateModal.value = false
@@ -298,6 +438,10 @@ const handleCreate = async () => {
       name: '',
       durationValue: 30,
       durationUnit: 'min',
+      kind: 'one_on_one',
+      locationType: 'google_meet',
+      locationDetails: '',
+      capacity: 10,
     }
 
     await loadEvents()
@@ -327,13 +471,31 @@ const editForm = ref({
   id: '',
   name: '',
   duration: 30,
+
+  kind: 'one_on_one' as 'one_on_one' | 'group',
+
+  locationType: 'google_meet' as 'google_meet' | 'presencial' | 'custom',
+  locationDetails: '',
+
+  capacity: 10,
 })
 
 const openEdit = (event: EventType) => {
+  const locationType = isValidLocationType(event.location?.type)
+    ? event.location.type
+    : 'google_meet'
+
   editForm.value = {
     id: event.id,
     name: event.name,
     duration: event.duration,
+
+    kind: event.kind ?? 'one_on_one',
+
+    locationType,
+    locationDetails: event.location?.details ?? '',
+
+    capacity: event.capacity ?? 10,
   }
 
   showEditModal.value = true
@@ -356,10 +518,19 @@ const handleUpdate = async () => {
     await updateEvent(editForm.value.id, {
       name: editForm.value.name,
       duration: editForm.value.duration,
+
+      kind: editForm.value.kind,
+
+      location: {
+        type: editForm.value.locationType,
+        details:
+          editForm.value.locationType === 'custom' ? editForm.value.locationDetails : undefined,
+      },
+
+      capacity: editForm.value.kind === 'group' ? editForm.value.capacity : undefined,
     })
 
     showEditModal.value = false
-
     await loadEvents()
   } catch (err: any) {
     alert(err.message)
