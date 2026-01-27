@@ -1,75 +1,86 @@
 <template>
-  <div class="max-w-3xl mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-6">Perfil</h1>
-
-    <div v-if="auth.loading">Cargando...</div>
-
-    <form v-else class="space-y-6" @submit.prevent="save">
-      <!-- Avatar -->
+  <div class="view-container">
+    <!-- HEADER -->
+    <div class="view-header">
       <div>
-        <label class="block font-medium mb-1">Avatar</label>
-        <img v-if="form.photoUrl" :src="form.photoUrl" class="w-20 h-20 rounded-full mb-2" />
+        <p class="subtitle">Administra tu información personal y configuración pública</p>
       </div>
+    </div>
 
-      <!-- Nombre -->
-      <div>
-        <label class="block font-medium mb-1">Nombre</label>
-        <input v-model="form.name" type="text" class="w-full border rounded px-3 py-2" required />
-      </div>
+    <div v-if="auth.loading">Cargando perfil…</div>
 
-      <!-- Email -->
-      <div>
-        <label class="block font-medium mb-1">Email</label>
-        <input
-          :value="auth.user?.email"
-          disabled
-          class="w-full border rounded px-3 py-2 bg-gray-100"
-        />
-      </div>
+    <!-- PERFIL -->
+    <form v-else @submit.prevent="save" class="card">
+      <div class="card-body">
+        <!-- AVATAR -->
+        <section class="row-between">
+          <div class="user-welcome">
+            <img :src="form.photoUrl || '/avatar-placeholder.png'" class="avatar-lg" />
+            <div>
+              <div class="label">Foto de perfil</div>
+            </div>
+          </div>
+        </section>
 
-      <!-- Zona horaria -->
-      <div>
-        <label class="block font-medium mb-1">Zona horaria</label>
-        <select v-model="form.timezone" class="w-full border rounded px-3 py-2">
-          <option v-for="tz in timezones" :key="tz" :value="tz">
-            {{ tz }}
-          </option>
-        </select>
-      </div>
+        <hr />
 
-      <!-- Mensaje de bienvenida -->
-      <div>
-        <label class="block font-medium mb-1">Mensaje de bienvenida</label>
-        <textarea
-          v-model="form.welcomeMessage"
-          rows="3"
-          class="w-full border rounded px-3 py-2"
-          placeholder="Este mensaje se muestra en tu página pública"
-        />
-      </div>
+        <!-- INFORMACIÓN PERSONAL -->
+        <section>
+          <div class="section-title">Información personal</div>
 
-      <div class="flex gap-3">
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
-          Guardar cambios
-        </button>
-      </div>
+          <div class="form-group">
+            <label class="label">Nombre</label>
+            <input v-model="form.name" type="text" class="select" required />
+          </div>
 
-      <hr class="my-10" />
+          <div class="form-group">
+            <label class="label">Email</label>
+            <input :value="auth.user?.email" disabled class="select input disabled" />
+            <span class="helper"> El correo no se puede modificar </span>
+          </div>
+        </section>
 
-      <div class="bg-red-50 border border-red-200 p-5 rounded-lg">
-        <h3 class="text-red-700 font-semibold mb-2">Zona peligrosa</h3>
-        <p class="text-sm text-red-600 mb-4">
-          Esta acción eliminará tu cuenta y desactivará todos tus eventos públicos.
-        </p>
+        <!-- PERFIL PÚBLICO -->
+        <section>
+          <div class="section-title">Perfil público</div>
 
-        <button
-          @click="confirmDelete"
-          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-        >
-          Eliminar cuenta
-        </button>
+          <div class="form-group">
+            <label class="label">Mensaje de bienvenida</label>
+            <textarea
+              v-model="form.welcomeMessage"
+              rows="3"
+              class="select"
+              placeholder="Se mostrará en tu página pública"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="label">Zona horaria</label>
+            <select v-model="form.timezone" class="select">
+              <option v-for="tz in timezones" :key="tz" :value="tz">
+                {{ tz }}
+              </option>
+            </select>
+          </div>
+        </section>
+
+        <!-- ACTIONS -->
+        <div class="actions-bar end">
+          <button type="submit" class="primary-btn">Guardar cambios</button>
+        </div>
       </div>
     </form>
+
+    <!-- ZONA DE PELIGRO -->
+    <div class="card danger-zone">
+      <div class="card-body">
+        <p class="helper">
+          Esta acción eliminará permanentemente tu cuenta y no se puede deshacer.
+        </p>
+
+        <button @click="confirmDelete" class="danger-btn">Eliminar cuenta</button>
+      </div>
+    </div>
   </div>
 </template>
 

@@ -9,6 +9,8 @@ import router from './router'
 import './services/firebase' // Configuración de firebase
 
 import { useAuthStore } from '@/stores/auth.store' //Autenticación
+import '@/assets/layout.css'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 
 const app = createApp(App)
 

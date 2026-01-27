@@ -12,72 +12,50 @@ const logout = async () => {
 </script>
 
 <template>
-  <div class="dashboard-home">
-    <header class="dashboard-header">
-      <div class="user-info">
+  <div class="view-container">
+    <!-- HEADER / BIENVENIDA -->
+    <div class="view-header d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
         <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Avatar" class="avatar" />
 
         <div>
-          <strong>{{ auth.user?.name }}</strong>
-          <div class="email">{{ auth.user?.email }}</div>
+          <h1 class="page-title mb-0">Hola, {{ auth.user?.name }}</h1>
+          <p class="subtitle mb-0">
+            {{ auth.user?.email }}
+          </p>
         </div>
       </div>
+    </div>
 
-      <button class="logout-btn" @click="logout">Cerrar sesión</button>
-    </header>
+    <!-- ACCIONES PRINCIPALES -->
+    <section class="card">
+      <div class="card-header">Comienza aquí</div>
 
-    <main class="dashboard-content">
-      <h1>Dashboard</h1>
-      <p>Bienvenida 👋</p>
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Acción principal -->
+          <div class="col-12 col-md-6 col-lg-4">
+            <RouterLink to="/dashboard/availability" class="quick-link-card h-100">
+              <i class="bi bi-clock ql-icon"></i>
+              <div>
+                <div class="day-name">Configurar disponibilidad</div>
+                <p class="muted mb-0">Define tus horarios laborales</p>
+              </div>
+            </RouterLink>
+          </div>
 
-      <ul>
-        <li>
-          <router-link to="/dashboard/availability"> Configurar disponibilidad </router-link>
-        </li>
-      </ul>
-    </main>
+          <!-- Próximamente -->
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="quick-link-card h-100 opacity-50 pe-none">
+              <i class="bi bi-calendar3 ql-icon"></i>
+              <div>
+                <div class="day-name">Ver reservas</div>
+                <p class="muted mb-0">Próximamente</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
-
-<style scoped>
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-}
-
-.email {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.logout-btn {
-  background: transparent;
-  border: 1px solid #ccc;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.logout-btn:hover {
-  background: #f5f5f5;
-}
-
-.dashboard-content {
-  padding: 24px;
-}
-</style>

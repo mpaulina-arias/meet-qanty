@@ -1,50 +1,56 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-10 px-4">
-    <div class="max-w-3xl mx-auto bg-white rounded-xl shadow p-8">
+  <div class="page">
+    <div class="view-container">
       <!-- Loading -->
-      <div v-if="loading" class="text-center text-gray-500">Cargando página pública...</div>
+      <div v-if="loading" class="muted">Cargando página pública...</div>
 
       <!-- Usuario no encontrado -->
-      <div v-else-if="!user" class="text-center text-red-600">Usuario no encontrado</div>
+      <div v-else-if="!user" class="error">Usuario no encontrado</div>
 
       <!-- Contenido -->
-      <div v-else>
-        <!-- Header usuario -->
-        <div class="text-center mb-10">
-          <img
-            v-if="user.photoUrl"
-            :src="user.photoUrl"
-            class="w-24 h-24 rounded-full mx-auto mb-4"
-          />
+      <div v-else class="card">
+        <div class="card-body">
+          <!-- Header usuario -->
+          <div class="user-public-header">
+            <img v-if="user.photoUrl" :src="user.photoUrl" class="avatar-lg" />
 
-          <h1 class="text-2xl font-bold">
-            {{ user.name }}
-          </h1>
+            <h1 class="page-title">
+              {{ user.name }}
+            </h1>
 
-          <p class="text-gray-600 mt-2">
-            {{ user.welcomeMessage || 'Selecciona un tipo de reunión para continuar.' }}
-          </p>
-        </div>
-
-        <!-- Lista de eventos -->
-        <div class="space-y-4">
-          <div
-            v-for="event in events"
-            :key="event.id"
-            @click="goToEvent(event.slug)"
-            class="border rounded-lg p-5 hover:shadow-md hover:border-blue-500 cursor-pointer transition"
-          >
-            <h2 class="font-semibold text-lg">
-              {{ event.name }}
-            </h2>
-
-            <p class="text-sm text-gray-500 mt-1">
-              {{ event.duration }} min • {{ event.locationType || 'Videollamada' }}
+            <p class="muted">
+              {{ user.welcomeMessage || 'Selecciona un tipo de reunión para continuar.' }}
             </p>
           </div>
 
-          <div v-if="events.length === 0" class="text-center text-gray-500">
-            Este usuario no tiene reuniones disponibles.
+          <!-- Lista de eventos -->
+          <div class="public-events">
+            <div
+              v-for="event in events"
+              :key="event.id"
+              @click="goToEvent(event.slug)"
+              class="public-event-card"
+            >
+              <div>
+                <h2 class="event-name">
+                  {{ event.name }}
+                </h2>
+                <p class="muted">
+                  {{ event.duration }} min •
+                  {{
+                    event.locationType === 'google_meet'
+                      ? 'Google Meet'
+                      : event.locationType || 'No especificado'
+                  }}
+                </p>
+              </div>
+
+              <i class="bi bi-chevron-right chevron" />
+            </div>
+
+            <div v-if="events.length === 0" class="muted text-center">
+              Este usuario no tiene reuniones disponibles.
+            </div>
           </div>
         </div>
       </div>
@@ -73,7 +79,7 @@ type PublicEvent = {
   name: string
   slug: string
   duration: number
-  locationType?: string
+  locationType: string
   isActive: boolean
 }
 
@@ -139,7 +145,7 @@ onMounted(async () => {
         name: data.name,
         slug: data.slug,
         duration: data.duration,
-        locationType: data.locationType,
+        locationType: data.location?.type ?? null,
         isActive: data.isActive,
       } as PublicEvent
     })

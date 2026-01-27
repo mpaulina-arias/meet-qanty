@@ -1,51 +1,66 @@
 <template>
-  <div class="max-w-6xl mx-auto p-6">
-    <div v-if="loading" class="text-gray-500">Cargando disponibilidad...</div>
+  <div class="view-container">
+    <div v-if="loading" class="muted">Cargando disponibilidad...</div>
 
-    <div v-else-if="!event || !user" class="text-red-600">Evento no encontrado</div>
+    <div v-else-if="!event || !user" class="error">Evento no encontrado</div>
 
-    <div v-else class="grid grid-cols-3 gap-6">
-      <!-- INFO EVENTO -->
-      <div class="col-span-1 border rounded-lg p-4">
-        <h1 class="text-xl font-bold mb-1">
-          {{ user.name }}
-        </h1>
+    <div v-else class="booking-layout">
+      <div class="booking-grid">
+        <!-- INFO EVENTO -->
+        <div class="booking-info">
+          <h1 class="section-title">{{ user.name }}</h1>
 
-        <h2 class="text-lg font-semibold">
-          {{ event.name }}
-        </h2>
+          <h2 class="event-title">{{ event.name }}</h2>
 
-        <p class="text-sm text-gray-600 mt-2">{{ event.duration }} min • Google Meet</p>
-      </div>
+          <p class="muted mt-2">{{ event.duration }} min</p>
 
-      <!-- CALENDARIO + SLOTS -->
-      <div class="col-span-2 flex gap-4">
-        <div class="w-2/3">
+          <div class="location-type">
+            <i class="bi bi-camera-video" v-if="event.location.type === 'google_meet'" />
+            <i class="bi bi-geo-alt" v-else-if="event.location.type === 'in_person'" />
+            <i class="bi bi-link-45deg" v-else />
+
+            <span>
+              {{
+                event.location.type === 'google_meet'
+                  ? 'Google Meet'
+                  : event.location.type === 'in_person'
+                    ? 'Presencial'
+                    : 'Enlace externo'
+              }}
+            </span>
+          </div>
+        </div>
+
+        <!-- CALENDARIO -->
+        <div class="booking-calendar">
+          <h3 class="calendar-title">Selecciona una fecha</h3>
+
           <vue-cal
+            locale="es"
             active-view="month"
             :min-date="today"
+            :time="false"
+            :disable-views="['years', 'year', 'week', 'day']"
             @cell-click="onDateSelected"
-            style="height: 600px"
+            style="height: 480px"
           />
         </div>
 
-        <div class="w-1/3 border rounded-lg p-4">
-          <h3 class="font-semibold mb-2">
-            {{ selectedDate ?? 'Selecciona una fecha' }}
+        <!-- SLOTS -->
+        <div class="booking-slots">
+          <h3 class="calendar-title">
+            {{ selectedDate ?? 'Horarios disponibles' }}
           </h3>
 
-          <div v-if="slotsLoading">Cargando slots...</div>
+          <div v-if="slotsLoading" class="muted">Cargando slots...</div>
 
-          <div v-else-if="slots.length === 0 && selectedDate">No hay horarios disponibles</div>
+          <div v-else-if="slots.length === 0 && selectedDate" class="muted">
+            No hay horarios disponibles
+          </div>
 
-          <ul v-else class="space-y-2">
-            <li
-              v-for="slot in slots"
-              :key="slot.start"
-              class="border rounded p-2 text-center cursor-pointer hover:bg-blue-100"
-              @click="selectSlot(slot)"
-            >
-              {{ slot.start }} - {{ slot.end }}
+          <ul v-else class="slots-list">
+            <li v-for="slot in slots" :key="slot.start" class="slot-item" @click="selectSlot(slot)">
+              {{ slot.start }}
             </li>
           </ul>
         </div>
@@ -83,6 +98,9 @@ interface EventType {
   ownerUid: string
   slug: string
   isActive: boolean
+  location: {
+    type: string
+  }
 }
 
 /* ================= STATE ================= */

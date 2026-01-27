@@ -1,35 +1,44 @@
 <template>
-  <div class="max-w-3xl mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-2">Mi enlace</h1>
-
-    <p class="text-sm text-gray-600 mb-6">
-      Si cambia su URL de Calendly, todos sus enlaces copiados dejarán de funcionar y deberán ser
-      actualizados.
-    </p>
-
-    <form @submit.prevent="confirmSave" class="space-y-4">
-      <div class="flex items-center gap-2">
-        <span class="text-gray-500">meet-qanty.com/</span>
-        <input
-          v-model="slug"
-          class="border rounded px-3 py-2 flex-1"
-          placeholder="tu-enlace"
-          required
-        />
+  <div class="view-container">
+    <!-- Header -->
+    <div class="view-header">
+      <div>
+        <p class="subtitle">Personaliza la URL de tu página pública de reservas</p>
       </div>
+    </div>
 
-      <p v-if="error" class="text-red-600 text-sm">
-        {{ error }}
-      </p>
+    <div class="card">
+      <div class="card-body">
+        <p class="muted">
+          Si cambias tu URL, todos los enlaces previamente compartidos dejarán de funcionar y
+          tendrán que ser actualizados.
+        </p>
 
-      <p class="text-sm text-gray-500">
-        Ejemplo:
-        <br />
-        <strong>meet-qanty.web.app/{{ slug || 'tu-enlace' }}/meetings/30min</strong>
-      </p>
+        <form @submit.prevent="confirmSave" class="space-y-4">
+          <div>
+            <div class="label">Tu enlace público</div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span class="muted">meet-qanty.web.app/</span>
+              <input
+                v-model="slug"
+                class="select"
+                placeholder="tu-enlace"
+                required
+                style="flex: 1"
+              />
+            </div>
+          </div>
 
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Guardar enlace</button>
-    </form>
+          <p v-if="error" class="error">
+            {{ error }}
+          </p>
+
+          <div class="actions-bar" style="margin-top: 32px">
+            <button type="submit" class="primary-btn">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 

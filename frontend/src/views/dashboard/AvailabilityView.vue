@@ -80,6 +80,8 @@ const testAvailableSlots = async () => {
   }
 }
 
+const activeTab = ref<'hours' | 'calendar' | 'advanced'>('hours')
+
 /* =======================
    AUTH-DEPENDENT LOAD
 ======================= */
@@ -101,93 +103,167 @@ function formatDay(day: Day): string {
   return day.charAt(0).toUpperCase() + day.slice(1)
 }
 </script>
-
 <template>
-  <div class="availability-view">
-    <h1>Horario laboral</h1>
-
-    <!-- =======================
-         Google Calendar
-    ======================= -->
-    <section class="integration">
-      <h2>Google Calendar</h2>
-
-      <p v-if="googleConnected" class="ok">✅ Conectado correctamente</p>
-
-      <button v-else class="connect-btn" @click="connectGoogleCalendar">
-        🔗 Conectar Google Calendar
-      </button>
-    </section>
-
-    <hr />
-
-    <!-- =======================
-         Zona horaria
-    ======================= -->
-    <div class="timezone">
-      <label for="timezone">Zona horaria</label>
-
-      <select id="timezone" v-model="availability.timezone">
-        <option v-for="tz in timezones" :key="tz" :value="tz">
-          {{ tz }}
-        </option>
-      </select>
+  <div class="view-container">
+    <!-- HEADER -->
+    <div class="view-header">
+      <!-- <h1>Disponibilidad</h1> -->
+      <p class="subtitle">Define cuándo pueden agendar reuniones contigo</p>
     </div>
 
-    <hr />
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab" :class="{ active: activeTab === 'hours' }" @click="activeTab = 'hours'">
+        Horarios
+      </button>
 
-    <!-- =======================
-         Horario semanal
-    ======================= -->
-    <div v-for="day in DAYS" :key="day" class="day-row">
-      <label class="day-label">
-        <input type="checkbox" v-model="availability.weekly[day].enabled" />
-        {{ formatDay(day) }}
-      </label>
+      <button
+        class="tab"
+        :class="{ active: activeTab === 'calendar' }"
+        @click="activeTab = 'calendar'"
+      >
+        Configuración de calendario
+      </button>
 
-      <div v-if="availability.weekly[day].enabled" class="ranges">
-        <div
-          v-for="(range, index) in availability.weekly[day].ranges"
-          :key="index"
-          class="range-row"
-        >
-          <input type="time" v-model="range.start" @change="availability.validateDay(day)" />
+      <button
+        class="tab"
+        :class="{ active: activeTab === 'advanced' }"
+        @click="activeTab = 'advanced'"
+      >
+        Configuración avanzada
+      </button>
+    </div>
 
-          <span>–</span>
-
-          <input type="time" v-model="range.end" @change="availability.validateDay(day)" />
-
-          <button type="button" class="delete-btn" @click="availability.removeRange(day, index)">
-            🗑️
-          </button>
+    <!-- ================= TAB: HORARIOS ================= -->
+    <div v-show="activeTab === 'hours'">
+      <section class="card">
+        <div class="card-header row-between">
+          <div>
+            <h2>Horas semanales</h2>
+            <p class="muted">Establece cuándo estás disponible habitualmente</p>
+          </div>
         </div>
 
-        <button type="button" class="add-btn" @click="availability.addRange(day)">
-          ➕ Agregar bloque
-        </button>
+        <div class="card-body">
+          <div v-for="day in DAYS" :key="day" class="weekly-row">
+            <div class="day-card">
+              <div class="day-header">
+                <div class="day-left">
+                  <input type="checkbox" v-model="availability.weekly[day].enabled" />
+                  <span class="day-name">{{ formatDay(day) }}</span>
+                </div>
 
-        <p v-if="availability.errors[day]" class="error">
-          {{ availability.errors[day] }}
-        </p>
+                <span
+                  class="status-badge"
+                  :class="{
+                    on: availability.weekly[day].enabled,
+                    off: !availability.weekly[day].enabled,
+                  }"
+                >
+                  {{ availability.weekly[day].enabled ? 'Disponible' : 'No disponible' }}
+                </span>
+              </div>
+
+              <div v-if="availability.weekly[day].enabled" class="ranges">
+                <div
+                  v-for="(range, index) in availability.weekly[day].ranges"
+                  :key="index"
+                  class="range-row"
+                >
+                  <div class="time-group">
+                    <input
+                      type="time"
+                      v-model="range.start"
+                      @change="availability.validateDay(day)"
+                    />
+                    <span class="dash">–</span>
+                    <input
+                      type="time"
+                      v-model="range.end"
+                      @change="availability.validateDay(day)"
+                    />
+                  </div>
+
+                  <button class="icon-btn danger" @click="availability.removeRange(day, index)">
+                    ✕
+                  </button>
+                </div>
+
+                <button class="link-btn" @click="availability.addRange(day)">
+                  + Agregar horas
+                </button>
+
+                <p v-if="availability.errors[day]" class="error">
+                  {{ availability.errors[day] }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= TAB: CALENDARIO ================= -->
+    <div v-show="activeTab === 'calendar'">
+      <div class="card-header">
+        <h2>Integración de calendario</h2>
+      </div>
+
+      <div class="card-body">
+        <h3>Google Calendar</h3>
+
+        <p v-if="googleConnected" class="ok">✅ Conectado correctamente</p>
+
+        <button v-else class="primary-btn" @click="connectGoogleCalendar">
+          Conectar Google Calendar
+        </button>
       </div>
     </div>
 
-    <!-- =======================
-         ACCIONES
-    ======================= -->
-    <button class="save-btn" @click="availability.saveSchedule">Guardar cambios</button>
+    <!-- ================= TAB: AVANZADO ================= -->
+    <div v-show="activeTab === 'advanced'">
+      <!-- ZONA HORARIA (RESTAURADA) -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Zona horaria</h2>
+        </div>
 
-    <button v-if="googleConnected" @click="testAvailableSlots" :disabled="loading">
-      {{ loading ? 'Consultando…' : 'Probar disponibilidad' }}
-    </button>
+        <div class="card-body">
+          <label class="label">Zona horaria</label>
+          <select v-model="availability.timezone" class="select">
+            <option v-for="tz in timezones" :key="tz" :value="tz">
+              {{ tz }}
+            </option>
+          </select>
+        </div>
+      </section>
 
-    <p v-if="error" class="error">
-      {{ error }}
-    </p>
+      <section class="card">
+        <div class="card-header">
+          <h2>Configuración avanzada</h2>
+        </div>
 
-    <!-- DEBUG -->
-    <pre v-if="availableSlots.length"
-      >{{ availableSlots }}
-    </pre>
+        <div class="card-body muted">
+          Próximamente: buffers, límites diarios, antelación mínima, etc.
+        </div>
+      </section>
+    </div>
+
+    <!-- ACCIONES GLOBALES (SIGUEN IGUAL) -->
+    <div class="actions-bar">
+      <button class="primary-btn" @click="availability.saveSchedule">Guardar cambios</button>
+
+      <button
+        v-if="googleConnected"
+        class="secondary-btn"
+        @click="testAvailableSlots"
+        :disabled="loading"
+      >
+        {{ loading ? 'Consultando…' : 'Probar disponibilidad' }}
+      </button>
+    </div>
+
+    <p v-if="error" class="error">{{ error }}</p>
+    <pre v-if="availableSlots.length" class="debug-box">{{ availableSlots }}</pre>
   </div>
 </template>

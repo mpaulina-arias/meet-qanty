@@ -1,26 +1,12 @@
 <template>
-  <div class="max-w-6xl mx-auto p-6">
+  <div class="view-container">
     <!-- HEADER SUPERIOR -->
-    <div class="flex justify-between items-start mb-8">
+    <div class="view-header">
       <div>
-        <h1 class="text-2xl font-bold">Programación</h1>
-        <p class="text-sm text-gray-600">Tipos de eventos</p>
-
-        <!-- Tabs -->
-        <div class="flex gap-4 mt-4 text-sm">
-          <span class="font-semibold text-black border-b-2 border-black pb-1">
-            Tipos de eventos
-          </span>
-          <span class="text-gray-500">Enlaces de un solo uso</span>
-          <span class="text-gray-500">Encuestas de reuniones</span>
-        </div>
+        <p class="subtitle">Tipos de eventos</p>
       </div>
 
       <div class="text-right">
-        <p class="text-sm font-semibold">
-          {{ auth.user?.name }}
-        </p>
-
         <a
           v-if="auth.user?.publicSlug"
           :href="`/${auth.user.publicSlug}/meetings`"
@@ -32,15 +18,17 @@
       </div>
     </div>
 
-    <!-- BOTÓN CREAR -->
-    <div class="mb-6">
-      <button
-        class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700"
-        @click="showCreateModal = true"
-      >
-        Crear
-      </button>
-    </div>
+    <!-- ACCIÓN PRINCIPAL -->
+    <section class="card">
+      <div class="card-body row-between">
+        <div>
+          <h2>Tipos de eventos</h2>
+          <p class="muted">Crea y administra tus eventos disponibles</p>
+        </div>
+
+        <button class="primary-btn" @click="showCreateModal = true">Crear</button>
+      </div>
+    </section>
 
     <div
       v-if="showCreateModal"
@@ -117,7 +105,7 @@
           <input
             v-if="form.locationType === 'custom'"
             v-model="form.locationDetails"
-            class="border rounded w-full px-3 py-2 mt-2"
+            class="select mt-2"
             placeholder="Ej: Oficina 402 o enlace externo"
           />
         </div>
@@ -125,31 +113,22 @@
         <!-- Capacidad -->
         <div v-if="form.kind === 'group'" class="mb-4">
           <label class="block text-sm mb-1">Límite de invitados</label>
-          <input
-            type="number"
-            min="2"
-            v-model.number="form.capacity"
-            class="border rounded w-full px-3 py-2"
-          />
+          <input type="number" min="2" v-model.number="form.capacity" class="select" />
         </div>
 
         <!-- Preview link -->
         <div v-if="previewLink" class="mb-4 text-sm">
-          <p class="text-gray-500">Enlace público</p>
+          <p class="muted">Enlace público</p>
           <p class="text-blue-600 break-all">
             {{ previewLink }}
           </p>
         </div>
 
         <!-- Acciones -->
-        <div class="flex justify-end gap-3">
-          <button class="text-sm text-gray-600" @click="showCreateModal = false">Cancelar</button>
+        <div class="actions-bar">
+          <button class="secondary-btn" @click="showCreateModal = false">Cancelar</button>
 
-          <button
-            class="bg-blue-600 text-white px-4 py-2 rounded"
-            :disabled="creating"
-            @click="handleCreate"
-          >
+          <button class="primary-btn" :disabled="creating" @click="handleCreate">
             Crear evento
           </button>
         </div>
@@ -256,47 +235,53 @@
     </div>
 
     <!-- LISTA DE EVENTOS -->
-    <div v-if="loading" class="text-gray-500">Cargando eventos...</div>
+    <section class="card">
+      <div class="card-header">
+        <h2>Tus eventos</h2>
+      </div>
 
-    <div v-else-if="events.length === 0" class="text-gray-500">No tienes eventos creados.</div>
+      <div class="card-body">
+        <div v-if="loading" class="muted">Cargando eventos...</div>
 
-    <div v-else class="space-y-4">
-      <div
-        v-for="event in events"
-        :key="event.id"
-        class="border rounded-lg p-5 flex justify-between items-center"
-      >
-        <!-- INFO EVENTO -->
-        <div>
-          <h3 class="font-semibold text-lg">
-            {{ event.name }}
-          </h3>
+        <div v-else-if="events.length === 0" class="muted">No tienes eventos creados.</div>
 
-          <p class="text-sm text-gray-600 mt-1">
-            {{ event.duration }} min - {{ event.location.type }} - {{ event.kind }}
-          </p>
-        </div>
+        <div v-else class="space-y-4">
+          <div
+            v-for="event in events"
+            :key="event.id"
+            class="border rounded-lg p-5 flex justify-between items-center"
+          >
+            <div>
+              <h3 class="font-semibold text-lg">
+                {{ event.name }}
+              </h3>
 
-        <!-- ACCIONES -->
-        <div class="flex flex-col items-end gap-2">
-          <button class="text-sm text-blue-600 hover:underline" @click="copyLink(event.slug)">
-            Copiar enlace
-          </button>
+              <p class="text-sm text-gray-600 mt-1">
+                {{ event.duration }} min - {{ event.location.type }} - {{ event.kind }}
+              </p>
+            </div>
 
-          <button class="text-sm text-gray-600 hover:underline" @click="openEdit(event)">
-            Editar
-          </button>
+            <div class="flex flex-col items-end gap-2">
+              <button class="text-sm text-blue-600 hover:underline" @click="copyLink(event.slug)">
+                Copiar enlace
+              </button>
 
-          <button class="text-sm text-red-600 hover:underline" @click="removeEvent(event)">
-            Eliminar
-          </button>
+              <button class="text-sm text-gray-600 hover:underline" @click="openEdit(event)">
+                Editar
+              </button>
 
-          <span class="text-xs text-gray-400">
-            /{{ auth.user?.publicSlug }}/meetings/{{ event.slug }}
-          </span>
+              <button class="text-sm text-red-600 hover:underline" @click="removeEvent(event)">
+                Eliminar
+              </button>
+
+              <span class="text-xs text-gray-400">
+                /{{ auth.user?.publicSlug }}/meetings/{{ event.slug }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
